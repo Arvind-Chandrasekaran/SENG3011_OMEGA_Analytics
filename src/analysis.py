@@ -48,7 +48,7 @@ def preprocess_data_prophet(data, years=5):
     try:
         df["Date"] = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce")
     except:
-        raise ValueError(f"Error parsing dates: {e}")
+        raise ValueError(f"Error parsing dates:")
 
     df = df[["Date", "Close"]].rename(columns={"Date": "ds", "Close": "y"})
     df["ds"] = df["ds"].dt.tz_localize(None)
