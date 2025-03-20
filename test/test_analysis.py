@@ -29,7 +29,6 @@ def client():
 def mock_dynamodb():
     """Mock DynamoDB using moto's mock_aws and set fake AWS credentials."""
     with mock_aws():
-        # Set fake AWS credentials (Moto ignores these but prevents boto3 errors)
         os.environ["AWS_ACCESS_KEY_ID"] = "fake_access_key"
         os.environ["AWS_SECRET_ACCESS_KEY"] = "fake_secret_key"
         os.environ["AWS_SESSION_TOKEN"] = "fake_session_token"
@@ -48,7 +47,8 @@ def mock_dynamodb():
                 {"AttributeName": "user_name", "AttributeType": "S"},
                 {"AttributeName": "stock_symbol#date", "AttributeType": "S"},
             ],
-            ProvisionedThroughput={"ReadCapacityUnits": 1, "WriteCapacityUnits": 1},
+            ProvisionedThroughput={"ReadCapacityUnits": 1,
+                                   "WriteCapacityUnits": 1},
         )
 
         # Wait until the table exists
