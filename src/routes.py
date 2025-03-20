@@ -43,6 +43,7 @@ def analyze():
         return jsonify(df_a.to_dict(orient="records"))
 
     except Exception as e:
+        print("❌ ERROR in /analyze:", str(e))
         return jsonify({"error": str(e)}), 500
 
 
