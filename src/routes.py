@@ -5,6 +5,7 @@ from analysis import (
     save_stock_data_to_dynamodb
 )
 import boto3
+from pprint import pprint
 
 routes = Blueprint("routes", __name__)
 
@@ -39,6 +40,8 @@ def analyze():
             df, forecast_days, sell_threshold, buy_threshold
         )
         save_stock_data_to_dynamodb(user_name, stock_name, df_a)
+        print(f"Printing some good stuf:")
+        pprint(df_a.to_dict(orient="records"))
 
         return jsonify(df_a.to_dict(orient="records"))
 

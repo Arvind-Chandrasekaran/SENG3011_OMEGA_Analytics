@@ -19,11 +19,11 @@ def mock_dynamodb():
     """Mock DynamoDB using moto without affecting app.py's real connection."""
     with mock_aws():
         # Create a mock DynamoDB resource
-        dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
+        dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
 
         # Create the test table
         table = dynamodb.create_table(
-            TableName="StockAnalysis",
+            TableName="StockAnalytics",
             KeySchema=[
                 {"AttributeName": "user_name", "KeyType": "HASH"},
                 {"AttributeName": "stock_symbol#date", "KeyType": "RANGE"}
@@ -36,4 +36,4 @@ def mock_dynamodb():
         )
         table.wait_until_exists()
 
-        yield dynamodb  # Provide the mock DB to tests
+        yield table  # Provide the mock DB to tests
