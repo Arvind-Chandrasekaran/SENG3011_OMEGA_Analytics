@@ -1,12 +1,18 @@
 import pytest
-import json
-from boto3.dynamodb.conditions import Key
 import sys
 import os
 from moto import mock_aws
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
-from app import app 
+
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../src")
+    )
+)
+
+from app import app  # noqa: E402
+
 
 @pytest.fixture
 def client():
@@ -14,6 +20,7 @@ def client():
     app.config["TESTING"] = True
     with app.test_client() as client:
         yield client
+
 
 @mock_aws
 def test_analyze_stock_success(client, mock_dynamodb):
@@ -42,7 +49,7 @@ def test_analyze_stock_success(client, mock_dynamodb):
     }
 
     response = client.post("/analyze", json=mock_payload)
-    
+
     assert response.status_code == 200
     response_data = response.get_json()
     assert isinstance(response_data, list)
@@ -55,7 +62,6 @@ def test_analyze_stock_missing_fields(client, mock_dynamodb):
     """Test the /analyze API with missing required fields."""
 
     response = client.post("/analyze", json={})
-    
     assert response.status_code == 400
     response_data = response.get_json()
     assert "error" in response_data
@@ -77,7 +83,7 @@ def test_analyze_stock_empty_data(client, mock_dynamodb):
 
     response = client.post("/analyze", json=mock_payload)
 
-    assert response.status_code == 400  # Should return bad request due to empty data
+    assert response.status_code == 400
     response_data = response.get_json()
     assert "error" in response_data
 
@@ -113,7 +119,10 @@ def test_retrieve_analysis_success(client, mock_dynamodb):
     assert isinstance(response_data, list)
     assert len(response_data) > 0
     assert response_data[0]["user_name"] == "test_user"
-    assert response_data[0]["analysis_data"]["forecast"] == "Mocked Forecast Data"
+    assert (
+            response_data[0]["analysis_data"]["forecast"]
+            == "Mocked Forecast Data"
+           )
 
 
 @mock_aws
@@ -128,7 +137,10 @@ def test_retrieve_analysis_no_data(client, mock_dynamodb):
     assert response.status_code == 404
     response_data = response.get_json()
     assert "message" in response_data
-    assert response_data["message"] == "No data found for the given user and stock."
+    assert (
+            response_data["message"]
+            == "No data found for the given user and stock."
+           )
 
 
 @mock_aws
@@ -172,7 +184,6 @@ def test_analyze_internal_server_error(client, mock_dynamodb, monkeypatch):
     response_data = response.get_json()
     assert "error" in response_data
     assert "Mocked Prophet Training Error" in response_data["error"]
-
 
 
 @mock_aws
@@ -244,7 +255,7 @@ def test_analyze_missing_user_name(client, mock_dynamodb):
 
 @mock_aws
 def test_analyze_insufficient_data(client, mock_dynamodb):
-    """Test /analyze with too few data points (Prophet requires more history)."""
+    """Test /analyze with too few data points."""
 
     mock_payload = {
         "stock_name": "AAPL",
@@ -260,6 +271,6 @@ def test_analyze_insufficient_data(client, mock_dynamodb):
 
     response = client.post("/analyze", json=mock_payload)
 
-    assert response.status_code == 400  # Should fail because Prophet needs more data
+    assert response.status_code == 400
     response_data = response.get_json()
     assert "error" in response_data

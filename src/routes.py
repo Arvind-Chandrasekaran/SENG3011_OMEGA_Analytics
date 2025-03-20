@@ -35,19 +35,22 @@ def analyze():
         buy_threshold = request_data.get("buy_threshold", -0.02)
         user_name = request_data.get("user_name")
 
-        if not stock_name or not stock_data or not years or not forecast_days or not sell_threshold or not buy_threshold or not user_name:
+        if (
+            not stock_name or not stock_data or not years
+            or not forecast_days or not sell_threshold
+            or not buy_threshold or not user_name
+           ):
             return jsonify({"error": "Missing Field"}), 400
-        
+
         if len(stock_data) < 2:
             return jsonify({"error": "insufficient data"}), 400
-
 
         df = preprocess_data_prophet(stock_data, years)
         df_a, model_a = analyze_stock(
             df, forecast_days, sell_threshold, buy_threshold
         )
         save_stock_data_to_dynamodb(user_name, stock_name, df_a)
-        print(f"Printing some good stuf:")
+        print("Printing some good stuff:")
         pprint(df_a.to_dict(orient="records"))
 
         return jsonify(df_a.to_dict(orient="records"))

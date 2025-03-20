@@ -46,9 +46,14 @@ def preprocess_data_prophet(data, years=5):
     df = pd.DataFrame(data)
 
     try:
-        df["Date"] = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce")
-    except:
-        raise ValueError(f"Error parsing dates:")
+        df["Date"] = pd.to_datetime(
+                                    df["Date"],
+                                    format="%Y-%m-%d",
+                                    errors="coerce"
+                                   )
+
+    except Exception as e:
+        raise ValueError(f"Error parsing dates: {e}")
 
     df = df[["Date", "Close"]].rename(columns={"Date": "ds", "Close": "y"})
     df["ds"] = df["ds"].dt.tz_localize(None)
@@ -118,6 +123,3 @@ def send_results_to_server(callback_url, stock_name, forecast_df, user_name):
 
     except Exception as e:
         return {"error": str(e)}
-
-
-

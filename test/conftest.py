@@ -5,8 +5,14 @@ import sys
 import os
 
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
-from src.app import app  # noqa: E402  
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../src")
+    )
+)
+
+from src.app import app  # noqa: E402
 
 
 @pytest.fixture
@@ -15,6 +21,7 @@ def client():
     app.config["TESTING"] = True
     with app.test_client() as client:
         yield client
+
 
 @pytest.fixture(scope="function")
 def mock_dynamodb():
@@ -34,7 +41,11 @@ def mock_dynamodb():
                 {"AttributeName": "user_name", "AttributeType": "S"},
                 {"AttributeName": "stock_symbol#date", "AttributeType": "S"},
             ],
-            ProvisionedThroughput={"ReadCapacityUnits": 1, "WriteCapacityUnits": 1},
+            ProvisionedThroughput={
+                                    "ReadCapacityUnits": 1,
+                                    "WriteCapacityUnits": 1,
+                                   },
+
         )
         table.wait_until_exists()
 
