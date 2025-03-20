@@ -37,6 +37,10 @@ def analyze():
 
         if not stock_name or not stock_data or not years or not forecast_days or not sell_threshold or not buy_threshold or not user_name:
             return jsonify({"error": "Missing Field"}), 400
+        
+        if len(stock_data) < 2:
+            return jsonify({"error": "insufficient data"}), 400
+
 
         df = preprocess_data_prophet(stock_data, years)
         df_a, model_a = analyze_stock(

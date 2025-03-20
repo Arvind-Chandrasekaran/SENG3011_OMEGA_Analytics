@@ -143,32 +143,36 @@ def test_retrieve_analysis_invalid_request(client, mock_dynamodb):
 
 
 @mock_aws
-def test_analyze_stock_exception_handling(client, mock_dynamodb, monkeypatch):
-    """Test /analyze API when an exception occurs inside the function."""
+def test_analyze_internal_server_error(client, mock_dynamodb, monkeypatch):
+    """Test /analyze API when an unexpected exception occurs."""
 
-    def mock_preprocess_data(*args, **kwargs):
-        raise Exception("Mocked Exception")
+    # Force an exception inside Prophet by mocking the model training function
+    def mock_fit(*args, **kwargs):
+        raise Exception("Mocked Prophet Training Error")
 
-    # Patch the function to simulate an exception
-    monkeypatch.setattr("analysis.preprocess_data_prophet", mock_preprocess_data)
+    # Monkeypatch the Prophet `fit` method to simulate a failure
+    monkeypatch.setattr("analysis.Prophet.fit", mock_fit)
 
     mock_payload = {
         "stock_name": "AAPL",
         "data": [
-            {"Date": "2023-01-01", "Close": 145.32}
+            {"Date": "2023-01-01", "Close": 145.32},
+            {"Date": "2023-01-02", "Close": 146.50}
         ],
         "years": 5,
         "forecast_days": 30,
         "sell_threshold": 0.02,
         "buy_threshold": -0.02,
-        "user_name": "usename121"
+        "user_name": "test_user"
     }
 
     response = client.post("/analyze", json=mock_payload)
 
-    assert response.status_code == 500  # Should return 500 Internal Server Error
+    assert response.status_code == 500  # Should return Internal Server Error
     response_data = response.get_json()
     assert "error" in response_data
+    assert "Mocked Prophet Training Error" in response_data["error"]
+
 
 
 @mock_aws
@@ -256,6 +260,6 @@ def test_analyze_insufficient_data(client, mock_dynamodb):
 
     response = client.post("/analyze", json=mock_payload)
 
-    assert response.status_code == 500  # Should fail because Prophet needs more data
+    assert response.status_code == 400  # Should fail because Prophet needs more data
     response_data = response.get_json()
     assert "error" in response_data

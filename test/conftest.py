@@ -4,8 +4,10 @@ from moto import mock_aws
 import sys
 import os
 
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
-from src.app import app  
+from src.app import app  # noqa: E402  
+
 
 @pytest.fixture
 def client():
