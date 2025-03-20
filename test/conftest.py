@@ -4,10 +4,8 @@ from moto import mock_aws
 import sys
 import os
 
-# Ensure `src` directory is in the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
-
-from src.app import app  # Import Flask app
+from src.app import app  
 
 @pytest.fixture
 def client():
@@ -18,17 +16,12 @@ def client():
 
 @pytest.fixture(scope="function")
 def mock_dynamodb():
-    """Mock DynamoDB using Moto's mock_aws."""
+    """Mock DynamoDB using moto without affecting app.py's real connection."""
     with mock_aws():
-        # ✅ Fix: Set fake AWS credentials to prevent "Unable to locate credentials" error
-        os.environ["AWS_ACCESS_KEY_ID"] = "test"
-        os.environ["AWS_SECRET_ACCESS_KEY"] = "test"
-        os.environ["AWS_SESSION_TOKEN"] = "test"
-
-        # Initialize a mocked AWS environment
+        # Create a mock DynamoDB resource
         dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
 
-        # ✅ Ensure the table is created before API calls
+        # Create the test table
         table = dynamodb.create_table(
             TableName="StockAnalysis",
             KeySchema=[
@@ -41,6 +34,6 @@ def mock_dynamodb():
             ],
             ProvisionedThroughput={"ReadCapacityUnits": 1, "WriteCapacityUnits": 1},
         )
+        table.wait_until_exists()
 
-        table.wait_until_exists()  # ✅ Ensure table exists before using
-        yield dynamodb  # Provide the mocked table to tests
+        yield dynamodb  # Provide the mock DB to tests
