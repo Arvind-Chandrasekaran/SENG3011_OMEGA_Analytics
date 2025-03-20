@@ -3,6 +3,7 @@ import json
 from boto3.dynamodb.conditions import Key
 import sys
 import os
+from moto import mock_aws
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 from app import app 
@@ -14,6 +15,7 @@ def client():
     with app.test_client() as client:
         yield client
 
+@mock_aws
 def test_analyze_stock(client, mock_dynamodb):
     """Test the /analyze API route without real DynamoDB connection."""
 
@@ -51,6 +53,7 @@ def test_analyze_stock(client, mock_dynamodb):
     # assert "stock_name" in response_data
     # assert response_data["stock_name"] == "AAPL"
 
+@mock_aws
 def test_retrieve_analysis(client, mock_dynamodb):
     """Test retrieving stock analysis from mocked DynamoDB."""
 
