@@ -40,7 +40,7 @@ def analyze():
         )
         save_stock_data_to_dynamodb(user_name, stock_name, df_a)
 
-        return jsonify(df_a.to_json())
+        return jsonify(df_a.to_dict(orient="records"))
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
