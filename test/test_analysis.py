@@ -27,11 +27,17 @@ def client():
 
 @pytest.fixture
 def mock_dynamodb():
-    """Mock DynamoDB using moto's mock_aws."""
+    """Mock DynamoDB using moto's mock_aws and set fake AWS credentials."""
     with mock_aws():
+        # Set fake AWS credentials (Moto ignores these but prevents boto3 errors)
+        os.environ["AWS_ACCESS_KEY_ID"] = "fake_access_key"
+        os.environ["AWS_SECRET_ACCESS_KEY"] = "fake_secret_key"
+        os.environ["AWS_SESSION_TOKEN"] = "fake_session_token"
+
+        # Create a mock DynamoDB resource
         dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
 
-        # Create a mock DynamoDB table with the correct schema
+        # Create a mock table with correct schema
         table = dynamodb.create_table(
             TableName=TABLE_NAME,
             KeySchema=[
@@ -42,14 +48,13 @@ def mock_dynamodb():
                 {"AttributeName": "user_name", "AttributeType": "S"},
                 {"AttributeName": "stock_symbol#date", "AttributeType": "S"},
             ],
-            ProvisionedThroughput={"ReadCapacityUnits": 1,
-                                   "WriteCapacityUnits": 1},
+            ProvisionedThroughput={"ReadCapacityUnits": 1, "WriteCapacityUnits": 1},
         )
 
-        # Wait for the table to be active
+        # Wait until the table exists
         table.meta.client.get_waiter("table_exists").wait(TableName=TABLE_NAME)
 
-        yield table  # Provide the table to the test
+        yield table  # Provide the mock table to tests
 
 
 def test_save_stock_data_to_dynamodb(mock_dynamodb):
