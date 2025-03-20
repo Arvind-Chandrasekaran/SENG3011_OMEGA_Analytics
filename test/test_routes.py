@@ -19,6 +19,11 @@ def client():
 def test_analyze_stock(client, mock_dynamodb):
     """Test the /analyze API route without real DynamoDB connection."""
 
+    os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
+    os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
+    os.environ['AWS_SECURITY_TOKEN'] = 'testing'
+    os.environ['AWS_SESSION_TOKEN'] = 'testing'
+
     # dynamodb = mock_dynamodb
     # table = dynamodb.Table("StockAnalysis")
         
@@ -57,6 +62,11 @@ def test_analyze_stock(client, mock_dynamodb):
 def test_retrieve_analysis(client, mock_dynamodb):
     """Test retrieving stock analysis from mocked DynamoDB."""
 
+    os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
+    os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
+    os.environ['AWS_SECURITY_TOKEN'] = 'testing'
+    os.environ['AWS_SESSION_TOKEN'] = 'testing'
+    
     # Get mock DynamoDB instance & table
     # dynamodb = mock_dynamodb
     # table = dynamodb.Table("StockAnalysis")
