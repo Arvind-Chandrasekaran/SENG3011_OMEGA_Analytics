@@ -2,7 +2,8 @@ from flask import Blueprint, request, jsonify
 from analysis import (
     preprocess_data_prophet,
     analyze_stock,
-    save_stock_data_to_dynamodb
+    save_stock_data_to_dynamodb,
+    convert_format_
 )
 import boto3
 from pprint import pprint
@@ -22,10 +23,12 @@ def analyze():
     API endpoint to analyze stock data.
     """
     try:
-        request_data = request.get_json()
+        request_data_new = request.get_json()
 
-        if not request_data:
+        if not request_data_new:
             return jsonify({"error": "No data received"}), 400
+        
+        request_data = convert_format_(request_data_new)
 
         stock_name = request_data.get("stock_name")
         stock_data = request_data.get("data")

@@ -1,0 +1,189 @@
+import requests
+import pandas as pd
+import json 
+from pprint import pprint
+
+url = "http://127.0.0.1:5000/analyze"
+
+
+
+
+#Replace with your own data (maintain the format)
+data = {'data_source': 'yahoo_finance',
+ 'dataset_id': 'http://seng3011-omega-25t1-testing-bucket.s3-ap-southeast-2-amazonaws.com',
+ 'dataset_type': 'Daily stock data',
+ 'events': [{'attribute': {'close': '244.47000122070312',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-02-18',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '244.8699951171875', 'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-02-19',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '245.8300018310547', 'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-02-20',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '245.5500030517578', 'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-02-21',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '247.10000610351562',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-02-24',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '247.0399932861328', 'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-02-25',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '240.36000061035156',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-02-26',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '237.3000030517578', 'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-02-27',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '241.83999633789062',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-02-28',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '238.02999877929688',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-03-03',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '235.92999267578125',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-03-04',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '235.74000549316406',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-03-05',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '235.3300018310547', 'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-03-06',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '239.07000732421875',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-03-07',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '227.47999572753906',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-03-10',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '220.83999633789062',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-03-11',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '216.97999572753906',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-03-12',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '209.67999267578125',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-03-13',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '213.49000549316406',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-03-14',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '214.0', 'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-03-17',
+                             'time-zone': 'GMT+11'}},
+            {'attribute': {'close': '214.29519653320312',
+                           'stock_name': 'apple'},
+             'event-type': 'stock-ohlc',
+             'time_object': {'duration': '0',
+                             'duration-unit': 'days',
+                             'time-stamp': '2025-03-18',
+                             'time-zone': 'GMT+11'}}],
+ 'stock_name': 'apple',
+ 'time_object': {'timestamp': '2025-03-27 21:03:44.150945',
+                 'timezone': 'GMT+11'},
+  "years": 5,
+  "forecast_days": 30,
+  "sell_threshold": 0.02,
+  "buy_threshold": -0.02,
+  "user_name": "usename121"
+                 
+                 }
+
+
+
+
+
+#Do not modify this code 
+response = requests.post(url, json=data)
+raw_response = json.loads(response.text)
+pprint(raw_response)
+
+
+'''
+df = pd.DataFrame({key: pd.Series(val) for key, val in raw_response.items()})
+df['ds'] = pd.to_datetime(df['ds'], unit='ms')
+df = df.rename(columns={
+    "yhat": "Predicted Value",
+    "yhat_lower": "Predicted Lower",
+    "yhat_upper": "Predicted Upper"
+})
+'''
+
+
+
+#Analystics Response stored in variable df 
+#print(df.head())
