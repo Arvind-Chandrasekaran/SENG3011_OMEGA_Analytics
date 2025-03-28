@@ -132,18 +132,20 @@ def convert_format_(request_data):
     try:
         # Extract events
         events = request_data.get("events", [])
-        if not events:
-            raise ValueError("No events found in request_data")
+        
 
         # Convert each event to the legacy format
         legacy_data = []
+
+
         for event in events:
-            date = event["time_object"]["time-stamp"]
-            close_price = float(event["attribute"]["close"])
-            legacy_data.append({
-                "Date": date,
-                "Close": round(close_price, 2)
-            })
+            if event["event-type"] == "stock-ohlc":
+                date = event["time_object"]["time-stamp"]
+                close_price = float(event["attribute"]["close"])
+                legacy_data.append({
+                    "Date": date,
+                    "Close": round(close_price, 2)
+                })
 
         # Construct the legacy request format
         legacy_request_data = {
@@ -155,6 +157,10 @@ def convert_format_(request_data):
             "buy_threshold": request_data.get("buy_threshold", -0.02),
             "user_name": request_data.get("user_name")
         }
+
+        if events == []:
+            print("here")
+            legacy_request_data["data"] == []
 
         return legacy_request_data
 
