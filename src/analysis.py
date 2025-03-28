@@ -159,7 +159,6 @@ def convert_format_(request_data):
         }
 
         if events == []:
-            print("here")
             legacy_request_data["data"] == []
 
         return legacy_request_data
