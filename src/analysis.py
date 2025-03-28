@@ -123,3 +123,47 @@ def send_results_to_server(callback_url, stock_name, forecast_df, user_name):
 
     except Exception as e:
         return {"error": str(e)}
+    
+
+def convert_format_(request_data):
+    """
+    Convert new structured event format to legacy format expected by /analyze route.
+    """
+    try:
+        # Extract events
+        events = request_data.get("events", [])
+        
+
+        # Convert each event to the legacy format
+        legacy_data = []
+
+
+        for event in events:
+            if event["event-type"] == "stock-ohlc":
+                date = event["time_object"]["time-stamp"]
+                close_price = float(event["attribute"]["close"])
+                legacy_data.append({
+                    "Date": date,
+                    "Close": round(close_price, 2)
+                })
+
+        # Construct the legacy request format
+        legacy_request_data = {
+            "stock_name": request_data.get("stock_name"),
+            "data": legacy_data,
+            "years": request_data.get("years", 5),
+            "forecast_days": request_data.get("forecast_days", 30),
+            "sell_threshold": request_data.get("sell_threshold", 0.02),
+            "buy_threshold": request_data.get("buy_threshold", -0.02),
+            "user_name": request_data.get("user_name")
+        }
+
+        if events == []:
+            legacy_request_data["data"] == []
+
+        return legacy_request_data
+
+    except Exception as e:
+        print("Error in convert_event_format_to_legacy:", str(e))
+        raise
+

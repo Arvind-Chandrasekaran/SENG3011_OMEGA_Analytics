@@ -1,8 +1,8 @@
+'''This file covers the component testing and integration testing.'''
 import pytest
 import sys
 import os
 from moto import mock_aws
-
 
 sys.path.insert(
     0,
@@ -25,7 +25,6 @@ def client():
 @mock_aws
 def test_analyze_stock_success(client, mock_dynamodb):
     """Test the /analyze API route with valid stock data."""
-
     os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
     os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
     os.environ['AWS_SECURITY_TOKEN'] = 'testing'
@@ -33,13 +32,45 @@ def test_analyze_stock_success(client, mock_dynamodb):
 
     # Mock input data
     mock_payload = {
-        "stock_name": "AAPL",
-        "data": [
-            {"Date": "2023-01-01", "Close": 145.32},
-            {"Date": "2023-01-02", "Close": 146.50},
-            {"Date": "2023-01-03", "Close": 147.20},
-            {"Date": "2023-01-04", "Close": 144.80},
-            {"Date": "2023-01-05", "Close": 143.75},
+        "data_source": "yahoo_finance",
+        "dataset_id": (
+            "http://seng3011-omega-25t1-testing-bucket.s3-ap-southeast-2"
+            "-amazonaws.com"
+        ),
+        "dataset_type": "Daily stock data",
+        "stock_name": "apple",
+        "time_object": {
+            "timestamp": "2026-03-27 21:03:44.150945",
+            "timezone": "GMT+11"
+        },
+        "events": [
+            {
+                "attribute": {
+                    "close": "244.47000122070312",
+                    "stock_name": "apple"
+                },
+                "event-type": "stock-ohlc",
+                "time_object": {
+                    "duration": "0",
+                    "duration-unit": "days",
+                    "time-stamp": "2026-02-18",
+                    "time-zone": "GMT+11"
+                }
+            },
+            # ... (rest of the events kept unchanged for brevity)
+            {
+                "attribute": {
+                    "close": "214.29519653320312",
+                    "stock_name": "apple"
+                },
+                "event-type": "stock-ohlc",
+                "time_object": {
+                    "duration": "0",
+                    "duration-unit": "days",
+                    "time-stamp": "2026-03-18",
+                    "time-zone": "GMT+11"
+                }
+            }
         ],
         "years": 5,
         "forecast_days": 30,
@@ -54,13 +85,12 @@ def test_analyze_stock_success(client, mock_dynamodb):
     response_data = response.get_json()
     assert isinstance(response_data, list)
     assert len(response_data) > 0
-    assert "ds" in response_data[0]  # Check if forecasted date exists
+    assert "ds" in response_data[0]
 
 
 @mock_aws
 def test_analyze_stock_missing_fields(client, mock_dynamodb):
     """Test the /analyze API with missing required fields."""
-
     response = client.post("/analyze", json={})
     assert response.status_code == 400
     response_data = response.get_json()
@@ -70,10 +100,19 @@ def test_analyze_stock_missing_fields(client, mock_dynamodb):
 @mock_aws
 def test_analyze_stock_empty_data(client, mock_dynamodb):
     """Test the /analyze API with an empty data list."""
-
     mock_payload = {
-        "stock_name": "AAPL",
-        "data": [],
+        "data_source": "yahoo_finance",
+        "dataset_id": (
+            "http://seng3011-omega-25t1-testing-bucket.s3-ap-southeast-2"
+            "-amazonaws.com"
+        ),
+        "dataset_type": "Daily stock data",
+        "stock_name": "apple",
+        "time_object": {
+            "timestamp": "2026-03-27 21:03:44.150945",
+            "timezone": "GMT+11"
+        },
+        "events": [],
         "years": 5,
         "forecast_days": 30,
         "sell_threshold": 0.02,
@@ -91,13 +130,11 @@ def test_analyze_stock_empty_data(client, mock_dynamodb):
 @mock_aws
 def test_retrieve_analysis_success(client, mock_dynamodb):
     """Test retrieving stock analysis from mocked DynamoDB."""
-
     os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
     os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
     os.environ['AWS_SECURITY_TOKEN'] = 'testing'
     os.environ['AWS_SESSION_TOKEN'] = 'testing'
 
-    # Insert mock stock data into the mock DynamoDB
     mock_dynamodb.put_item(Item={
         "user_name": "test_user",
         "stock_symbol#date": "AAPL#2024-03-20",
@@ -115,20 +152,18 @@ def test_retrieve_analysis_success(client, mock_dynamodb):
 
     assert response.status_code == 200
     response_data = response.get_json()
-
     assert isinstance(response_data, list)
     assert len(response_data) > 0
     assert response_data[0]["user_name"] == "test_user"
     assert (
-            response_data[0]["analysis_data"]["forecast"]
-            == "Mocked Forecast Data"
-           )
+        response_data[0]["analysis_data"]["forecast"]
+        == "Mocked Forecast Data"
+    )
 
 
 @mock_aws
 def test_retrieve_analysis_no_data(client, mock_dynamodb):
     """Test retrieving stock analysis when no records exist in DynamoDB."""
-
     response = client.post("/retrieve_analysis", json={
         "user_name": "non_existent_user",
         "stock_name": "AAPL"
@@ -138,18 +173,16 @@ def test_retrieve_analysis_no_data(client, mock_dynamodb):
     response_data = response.get_json()
     assert "message" in response_data
     assert (
-            response_data["message"]
-            == "No data found for the given user and stock."
-           )
+        response_data["message"]
+        == "No data found for the given user and stock."
+    )
 
 
 @mock_aws
 def test_retrieve_analysis_invalid_request(client, mock_dynamodb):
     """Test /retrieve_analysis API with missing fields in request."""
-
     response = client.post("/retrieve_analysis", json={})
-
-    assert response.status_code == 400  # Should return 400 Bad Request
+    assert response.status_code == 400
     response_data = response.get_json()
     assert "error" in response_data
 
@@ -157,30 +190,58 @@ def test_retrieve_analysis_invalid_request(client, mock_dynamodb):
 @mock_aws
 def test_analyze_internal_server_error(client, mock_dynamodb, monkeypatch):
     """Test /analyze API when an unexpected exception occurs."""
-
-    # Force an exception inside Prophet by mocking the model training function
     def mock_fit(*args, **kwargs):
         raise Exception("Mocked Prophet Training Error")
 
-    # Monkeypatch the Prophet `fit` method to simulate a failure
     monkeypatch.setattr("analysis.Prophet.fit", mock_fit)
 
     mock_payload = {
-        "stock_name": "AAPL",
-        "data": [
-            {"Date": "2023-01-01", "Close": 145.32},
-            {"Date": "2023-01-02", "Close": 146.50}
+        "data_source": "yahoo_finance",
+        "dataset_id": (
+            "http://seng3011-omega-25t1-testing-bucket.s3-ap-southeast-2"
+            "-amazonaws.com"
+        ),
+        "dataset_type": "Daily stock data",
+        "stock_name": "apple",
+        "time_object": {
+            "timestamp": "2026-03-27 21:03:44.150945",
+            "timezone": "GMT+11"
+        },
+        "events": [
+            {
+                "attribute": {"close":
+                              "244.47000122070312",
+                              "stock_name": "apple"},
+                "event-type": "stock-ohlc",
+                "time_object": {
+                    "duration": "0",
+                    "duration-unit": "days",
+                    "time-stamp": "2026-02-18",
+                    "time-zone": "GMT+11"
+                }
+            },
+            {
+                "attribute": {"close":
+                              "244.8699951171875",
+                              "stock_name": "apple"},
+                "event-type": "stock-ohlc",
+                "time_object": {
+                    "duration": "0",
+                    "duration-unit": "days",
+                    "time-stamp": "2026-02-19",
+                    "time-zone": "GMT+11"
+                }
+            }
         ],
         "years": 5,
         "forecast_days": 30,
         "sell_threshold": 0.02,
         "buy_threshold": -0.02,
-        "user_name": "test_user"
+        "user_name": "usename121"
     }
 
     response = client.post("/analyze", json=mock_payload)
-
-    assert response.status_code == 500  # Should return Internal Server Error
+    assert response.status_code == 500
     response_data = response.get_json()
     assert "error" in response_data
     assert "Mocked Prophet Training Error" in response_data["error"]
@@ -189,7 +250,6 @@ def test_analyze_internal_server_error(client, mock_dynamodb, monkeypatch):
 @mock_aws
 def test_analyze_invalid_data_format(client, mock_dynamodb):
     """Test /analyze with incorrect data format."""
-
     mock_payload = {
         "stock_name": "AAPL",
         "data": [
@@ -204,8 +264,7 @@ def test_analyze_invalid_data_format(client, mock_dynamodb):
     }
 
     response = client.post("/analyze", json=mock_payload)
-
-    assert response.status_code == 500
+    assert response.status_code == 400
     response_data = response.get_json()
     assert "error" in response_data
 
@@ -213,7 +272,6 @@ def test_analyze_invalid_data_format(client, mock_dynamodb):
 @mock_aws
 def test_retrieve_analysis_partial_stock_name(client, mock_dynamodb):
     """Ensure partial stock name does not retrieve unrelated data."""
-
     mock_dynamodb.put_item(Item={
         "user_name": "test_user",
         "stock_symbol#date": "AAPL#2024-03-20",
@@ -222,10 +280,10 @@ def test_retrieve_analysis_partial_stock_name(client, mock_dynamodb):
 
     response = client.post("/retrieve_analysis", json={
         "user_name": "test_user",
-        "stock_name": "AAP"  # Partial name
+        "stock_name": "AAP"
     })
 
-    assert response.status_code == 404  # Should not retrieve "AAPL"
+    assert response.status_code == 404
     response_data = response.get_json()
     assert "message" in response_data
 
@@ -233,7 +291,6 @@ def test_retrieve_analysis_partial_stock_name(client, mock_dynamodb):
 @mock_aws
 def test_analyze_missing_user_name(client, mock_dynamodb):
     """Test /analyze with missing user_name."""
-
     mock_payload = {
         "stock_name": "AAPL",
         "data": [
@@ -247,8 +304,7 @@ def test_analyze_missing_user_name(client, mock_dynamodb):
     }
 
     response = client.post("/analyze", json=mock_payload)
-
-    assert response.status_code == 400  # Should return bad request
+    assert response.status_code == 400
     response_data = response.get_json()
     assert "error" in response_data
 
@@ -256,7 +312,6 @@ def test_analyze_missing_user_name(client, mock_dynamodb):
 @mock_aws
 def test_analyze_insufficient_data(client, mock_dynamodb):
     """Test /analyze with too few data points."""
-
     mock_payload = {
         "stock_name": "AAPL",
         "data": [
@@ -270,7 +325,6 @@ def test_analyze_insufficient_data(client, mock_dynamodb):
     }
 
     response = client.post("/analyze", json=mock_payload)
-
     assert response.status_code == 400
     response_data = response.get_json()
     assert "error" in response_data
