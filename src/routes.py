@@ -64,11 +64,13 @@ def analyze():
         df_a, model_a = analyze_stock(
             df, forecast_days, sell_threshold, buy_threshold
         )
-        save_stock_data_to_dynamodb(user_name, stock_name, df_a)
+        print("after analyse")
+        
+        
         print("Printing some good stuff:")
         pprint(df_a.to_dict(orient="records"))
 
-        print("after analyse")
+        save_stock_data_to_dynamodb(user_name, stock_name, df_a)
 
         return jsonify(df_a.to_dict(orient="records"))
 
