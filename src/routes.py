@@ -13,16 +13,18 @@ routes = Blueprint("routes", __name__)
 
 
 DYNAMODB_ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT")
-
+print(before)
 if DYNAMODB_ENDPOINT:
     dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2", endpoint_url=DYNAMODB_ENDPOINT)
     print("hello 11111")
 else:
     dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
-    print(DYNAMODB_ENDPOINT)
+    print("hello 222")
 
 TABLE_NAME = "StockAnalytics"
 table = dynamodb.Table(TABLE_NAME)
+
+
 
 
 
