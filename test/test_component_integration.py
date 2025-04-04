@@ -2,13 +2,11 @@
 import pytest
 import sys
 import os
-from moto import mock_aws
+import boto3
 
 sys.path.insert(
     0,
-    os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "../src")
-    )
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "../src"))
 )
 
 from app import app  # noqa: E402
@@ -22,8 +20,47 @@ def client():
         yield client
 
 
-@mock_aws
-def test_analyze_stock_success(client, mock_dynamodb):
+@pytest.fixture(scope="function")
+def local_dynamodb():
+    """Fixture to set up a local DynamoDB table for testing."""
+    region = os.environ.get("AWS_DEFAULT_REGION", "ap-southeast-2")
+    endpoint = os.environ.get("DYNAMODB_ENDPOINT", "http://localhost:8000")
+    dynamodb = boto3.resource("dynamodb", region_name=region, endpoint_url=endpoint)
+    table_name = "StockAnalytics"
+    try:
+        table = dynamodb.Table(table_name)
+        table.load()  # Check if table exists
+    except Exception:
+        table = dynamodb.create_table(
+            TableName=table_name,
+            KeySchema=[
+                {"AttributeName": "user_name", "KeyType": "HASH"},
+                {"AttributeName": "stock_symbol#date", "KeyType": "RANGE"}
+            ],
+            AttributeDefinitions=[
+                {"AttributeName": "user_name", "AttributeType": "S"},
+                {"AttributeName": "stock_symbol#date", "AttributeType": "S"}
+            ],
+            ProvisionedThroughput={
+                "ReadCapacityUnits": 5,
+                "WriteCapacityUnits": 5
+            }
+        )
+        table.wait_until_exists()
+    # Clean up any existing items before running a test
+    scan = table.scan()
+    with table.batch_writer() as batch:
+        for each in scan.get("Items", []):
+            batch.delete_item(
+                Key={
+                    "user_name": each["user_name"],
+                    "stock_symbol#date": each["stock_symbol#date"]
+                }
+            )
+    yield table
+
+
+def test_analyze_stock_success(client, local_dynamodb):
     """Test the /analyze API route with valid stock data."""
     os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
     os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
@@ -57,7 +94,6 @@ def test_analyze_stock_success(client, mock_dynamodb):
                     "time-zone": "GMT+11"
                 }
             },
-            # ... (rest of the events kept unchanged for brevity)
             {
                 "attribute": {
                     "close": "214.29519653320312",
@@ -88,8 +124,7 @@ def test_analyze_stock_success(client, mock_dynamodb):
     assert "ds" in response_data[0]
 
 
-@mock_aws
-def test_analyze_stock_missing_fields(client, mock_dynamodb):
+def test_analyze_stock_missing_fields(client, local_dynamodb):
     """Test the /analyze API with missing required fields."""
     response = client.post("/analyze", json={})
     assert response.status_code == 400
@@ -97,8 +132,7 @@ def test_analyze_stock_missing_fields(client, mock_dynamodb):
     assert "error" in response_data
 
 
-@mock_aws
-def test_analyze_stock_empty_data(client, mock_dynamodb):
+def test_analyze_stock_empty_data(client, local_dynamodb):
     """Test the /analyze API with an empty data list."""
     mock_payload = {
         "data_source": "yahoo_finance",
@@ -127,15 +161,15 @@ def test_analyze_stock_empty_data(client, mock_dynamodb):
     assert "error" in response_data
 
 
-@mock_aws
-def test_retrieve_analysis_success(client, mock_dynamodb):
-    """Test retrieving stock analysis from mocked DynamoDB."""
+def test_retrieve_analysis_success(client, local_dynamodb):
+    """Test retrieving stock analysis from local DynamoDB."""
     os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
     os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
     os.environ['AWS_SECURITY_TOKEN'] = 'testing'
     os.environ['AWS_SESSION_TOKEN'] = 'testing'
 
-    mock_dynamodb.put_item(Item={
+    # Put an item directly into the local DynamoDB table
+    local_dynamodb.put_item(Item={
         "user_name": "test_user",
         "stock_symbol#date": "AAPL#2024-03-20",
         "analysis_data": {
@@ -161,9 +195,8 @@ def test_retrieve_analysis_success(client, mock_dynamodb):
     )
 
 
-@mock_aws
-def test_retrieve_analysis_no_data(client, mock_dynamodb):
-    """Test retrieving stock analysis when no records exist in DynamoDB."""
+def test_retrieve_analysis_no_data(client, local_dynamodb):
+    """Test retrieving stock analysis when no records exist in local DynamoDB."""
     response = client.post("/retrieve_analysis", json={
         "user_name": "non_existent_user",
         "stock_name": "AAPL"
@@ -178,8 +211,7 @@ def test_retrieve_analysis_no_data(client, mock_dynamodb):
     )
 
 
-@mock_aws
-def test_retrieve_analysis_invalid_request(client, mock_dynamodb):
+def test_retrieve_analysis_invalid_request(client, local_dynamodb):
     """Test /retrieve_analysis API with missing fields in request."""
     response = client.post("/retrieve_analysis", json={})
     assert response.status_code == 400
@@ -187,12 +219,10 @@ def test_retrieve_analysis_invalid_request(client, mock_dynamodb):
     assert "error" in response_data
 
 
-@mock_aws
-def test_analyze_internal_server_error(client, mock_dynamodb, monkeypatch):
+def test_analyze_internal_server_error(client, local_dynamodb, monkeypatch):
     """Test /analyze API when an unexpected exception occurs."""
     def mock_fit(*args, **kwargs):
         raise Exception("Mocked Prophet Training Error")
-
     monkeypatch.setattr("analysis.Prophet.fit", mock_fit)
 
     mock_payload = {
@@ -209,9 +239,7 @@ def test_analyze_internal_server_error(client, mock_dynamodb, monkeypatch):
         },
         "events": [
             {
-                "attribute": {"close":
-                              "244.47000122070312",
-                              "stock_name": "apple"},
+                "attribute": {"close": "244.47000122070312", "stock_name": "apple"},
                 "event-type": "stock-ohlc",
                 "time_object": {
                     "duration": "0",
@@ -221,9 +249,7 @@ def test_analyze_internal_server_error(client, mock_dynamodb, monkeypatch):
                 }
             },
             {
-                "attribute": {"close":
-                              "244.8699951171875",
-                              "stock_name": "apple"},
+                "attribute": {"close": "244.8699951171875", "stock_name": "apple"},
                 "event-type": "stock-ohlc",
                 "time_object": {
                     "duration": "0",
@@ -247,8 +273,7 @@ def test_analyze_internal_server_error(client, mock_dynamodb, monkeypatch):
     assert "Mocked Prophet Training Error" in response_data["error"]
 
 
-@mock_aws
-def test_analyze_invalid_data_format(client, mock_dynamodb):
+def test_analyze_invalid_data_format(client, local_dynamodb):
     """Test /analyze with incorrect data format."""
     mock_payload = {
         "stock_name": "AAPL",
@@ -269,10 +294,9 @@ def test_analyze_invalid_data_format(client, mock_dynamodb):
     assert "error" in response_data
 
 
-@mock_aws
-def test_retrieve_analysis_partial_stock_name(client, mock_dynamodb):
+def test_retrieve_analysis_partial_stock_name(client, local_dynamodb):
     """Ensure partial stock name does not retrieve unrelated data."""
-    mock_dynamodb.put_item(Item={
+    local_dynamodb.put_item(Item={
         "user_name": "test_user",
         "stock_symbol#date": "AAPL#2024-03-20",
         "analysis_data": {"forecast": "Valid Data"}
@@ -288,8 +312,7 @@ def test_retrieve_analysis_partial_stock_name(client, mock_dynamodb):
     assert "message" in response_data
 
 
-@mock_aws
-def test_analyze_missing_user_name(client, mock_dynamodb):
+def test_analyze_missing_user_name(client, local_dynamodb):
     """Test /analyze with missing user_name."""
     mock_payload = {
         "stock_name": "AAPL",
@@ -309,8 +332,7 @@ def test_analyze_missing_user_name(client, mock_dynamodb):
     assert "error" in response_data
 
 
-@mock_aws
-def test_analyze_insufficient_data(client, mock_dynamodb):
+def test_analyze_insufficient_data(client, local_dynamodb):
     """Test /analyze with too few data points."""
     mock_payload = {
         "stock_name": "AAPL",

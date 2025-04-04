@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, request, jsonify
 from analysis import (
     preprocess_data_prophet,
@@ -10,10 +11,12 @@ from pprint import pprint
 
 routes = Blueprint("routes", __name__)
 
-# Initialize DynamoDB
-dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
+
+DYNAMODB_ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT")
+dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2", endpoint_url=DYNAMODB_ENDPOINT) if DYNAMODB_ENDPOINT else boto3.resource("dynamodb", region_name="ap-southeast-2")
 TABLE_NAME = "StockAnalytics"
 table = dynamodb.Table(TABLE_NAME)
+
 
 
 # Routes for the API
