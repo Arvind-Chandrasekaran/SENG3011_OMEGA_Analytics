@@ -4,9 +4,19 @@ import requests
 import json
 from decimal import Decimal
 import boto3
+import os
 
-# Initialize the DynamoDB resource
-dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
+
+
+DYNAMODB_ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT")
+print("before")
+if DYNAMODB_ENDPOINT:
+    dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2", endpoint_url=DYNAMODB_ENDPOINT)
+    print("hello 11111")
+else:
+    dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
+    print("hello 222")
+
 TABLE_NAME = "StockAnalytics"
 table = dynamodb.Table(TABLE_NAME)
 

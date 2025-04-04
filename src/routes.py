@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, request, jsonify
 from analysis import (
     preprocess_data_prophet,
@@ -10,10 +11,21 @@ from pprint import pprint
 
 routes = Blueprint("routes", __name__)
 
-# Initialize DynamoDB
-dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
+
+DYNAMODB_ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT")
+print("before")
+if DYNAMODB_ENDPOINT:
+    dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2", endpoint_url=DYNAMODB_ENDPOINT)
+    print("hello 11111")
+else:
+    dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
+    print("hello 222")
+
 TABLE_NAME = "StockAnalytics"
 table = dynamodb.Table(TABLE_NAME)
+
+
+
 
 
 # Routes for the API
@@ -49,12 +61,18 @@ def analyze():
             return jsonify({"error": "insufficient data"}), 400
 
         df = preprocess_data_prophet(stock_data, years)
+
+        print("before analyse")
         df_a, model_a = analyze_stock(
             df, forecast_days, sell_threshold, buy_threshold
         )
-        save_stock_data_to_dynamodb(user_name, stock_name, df_a)
+        print("after analyse")
+        
+        
         print("Printing some good stuff:")
         pprint(df_a.to_dict(orient="records"))
+
+        save_stock_data_to_dynamodb(user_name, stock_name, df_a)
 
         return jsonify(df_a.to_dict(orient="records"))
 
