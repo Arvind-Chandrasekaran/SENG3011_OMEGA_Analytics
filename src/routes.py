@@ -13,7 +13,7 @@ routes = Blueprint("routes", __name__)
 
 
 DYNAMODB_ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT")
-print(before)
+print("before")
 if DYNAMODB_ENDPOINT:
     dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2", endpoint_url=DYNAMODB_ENDPOINT)
     print("hello 11111")
