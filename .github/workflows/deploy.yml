@@ -41,7 +41,7 @@ jobs:
         id: deploy-ecs
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition: /ecs/task_definition.json
+          task-definition: ecs/task_definition.json
           service: analytics_service
           cluster: analytics_autodeployment_Cluster3
           container-name: analytics_autodeployment_container3
