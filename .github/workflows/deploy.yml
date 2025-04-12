@@ -1,0 +1,48 @@
+name: deploy_analytics
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**'  #edit comment to trigger
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.ARVIND_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.ARVIND_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-2
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry: 581143889511.dkr.ecr.ap-southeast-2.amazonaws.com
+
+      - name: Build and push Docker image
+        id: build-image
+        env:
+          ECR_REGISTRY: 581143889511.dkr.ecr.ap-southeast-2.amazonaws.com
+          ECR_REPOSITORY: analyticsservice
+          IMAGE_TAG: latest
+        run: |
+          docker build -f Dockerfile --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Update ECS task definition
+        id: deploy-ecs
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: /ecs/task_definition.json
+          service: analytics_service
+          cluster: analytics_autodeployment_Cluster3
+          container-name: analytics_autodeployment_container3
+          image: ${{ steps.build-image.outputs.image }}
