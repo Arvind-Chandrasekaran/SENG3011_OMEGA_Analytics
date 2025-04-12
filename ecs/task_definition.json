@@ -1,0 +1,52 @@
+{
+        "family": "analytics_autodeployment_taskdefinition3",
+        "containerDefinitions": [
+            {
+                "name": "analytics_autodeployment_container3",
+                "image": "581143889511.dkr.ecr.ap-southeast-2.amazonaws.com/analyticsservice:latest",
+                "cpu": 0,
+                "portMappings": [
+                    {
+                        "name": "analytics_autodeployment_container3-5001-tcp",
+                        "containerPort": 5001,
+                        "hostPort": 5001,
+                        "protocol": "tcp",
+                        "appProtocol": "http"
+                    }
+                ],
+                "essential": true,
+                "environment": [],
+                "environmentFiles": [],
+                "mountPoints": [],
+                "volumesFrom": [],
+                "ulimits": [],
+                "logConfiguration": {
+                    "logDriver": "awslogs",
+                    "options": {
+                        "awslogs-group": "/ecs/analytics_autodeployment_taskdefinition3",
+                        "mode": "non-blocking",
+                        "awslogs-create-group": "true",
+                        "max-buffer-size": "25m",
+                        "awslogs-region": "ap-southeast-2",
+                        "awslogs-stream-prefix": "ecs"
+                    },
+                    "secretOptions": []
+                },
+                "systemControls": []
+            }
+        ],
+        "taskRoleArn": "arn:aws:iam::581143889511:role/task_role_for_dynamoDB",
+        "executionRoleArn": "arn:aws:iam::581143889511:role/ecsTaskExecutionRole",
+        "networkMode": "awsvpc",
+        "volumes": [],
+        "placementConstraints": [],
+        "requiresCompatibilities": [
+            "FARGATE"
+        ],
+        "cpu": "1024",
+        "memory": "3072",
+        "runtimePlatform": {
+            "cpuArchitecture": "X86_64",
+            "operatingSystemFamily": "LINUX"
+        }
+    }
