@@ -32,6 +32,7 @@ table = dynamodb.Table(TABLE_NAME)
 table_users = dynamodb.Table("users") 
 
 SKIP_USER_CHECK = os.environ.get("SKIP_USER_CHECK", "false").lower() == "true"
+print(SKIP_USER_CHECK) ###########################
 
 # Routes for the API
 @routes.route("/analyze", methods=["POST"])
@@ -58,9 +59,11 @@ def analyze():
 
         
         if not user_name and not SKIP_USER_CHECK:
+            print("HELOOOOOOOOOOOOOOOOOOOOOOOO1")
             return jsonify({"error": "user_name is required"}), 400
         if not table_users.get_item(Key={"user_name": user_name}).get("Item") and not SKIP_USER_CHECK:
             return jsonify({"error": "UserNotRegistered"}), 401
+            print("HELOOOOOOOOOOOOOOOOOOOOOOOO2")
         
         
         if (
