@@ -31,7 +31,7 @@ table = dynamodb.Table(TABLE_NAME)
 # Second dynamoDB table for registering users 
 table_users = dynamodb.Table("users") 
 
-
+SKIP_USER_CHECK = os.environ.get("SKIP_USER_CHECK", "false").lower() == "true"
 
 # Routes for the API
 @routes.route("/analyze", methods=["POST"])
@@ -57,6 +57,12 @@ def analyze():
         user_name = request_data.get("user_name")
 
         
+        if not user_name and not SKIP_USER_CHECK:
+            return jsonify({"error": "user_name is required"}), 400
+        if not table_users.get_item(Key={"user_name": user_name}).get("Item") and not SKIP_USER_CHECK:
+            return jsonify({"error": "UserNotRegistered"}), 401
+
+        
         if (
             not stock_name or not stock_data or not years
             or not forecast_days or not sell_threshold
@@ -77,10 +83,7 @@ def analyze():
         print("Printing some good stuff:")
         pprint(df_a.to_dict(orient="records"))
 
-        if not user_name:
-            return jsonify({"error": "user_name is required"}), 400
-        if not table_users.get_item(Key={"user_name": user_name}).get("Item"):
-            return jsonify({"error": "UserNotRegistered"}), 401
+        
 
         save_stock_data_to_dynamodb(user_name, stock_name, df_a)
 
@@ -104,9 +107,9 @@ def retrieve_analysis():
         if not user_name or not stock_name:
             return jsonify({"error": "Missing Field"}), 400
         
-        if not user_name:
+        if not user_name and not SKIP_USER_CHECK:
             return jsonify({"error": "user_name is required"}), 400
-        if not table_users.get_item(Key={"user_name": user_name}).get("Item"):
+        if not table_users.get_item(Key={"user_name": user_name}).get("Item") and not SKIP_USER_CHECK:
             return jsonify({"error": "UserNotRegistered"}), 401
 
         response = table.query(
