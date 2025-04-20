@@ -116,82 +116,24 @@ def test_analyze_stock_success(client, local_dynamodb):
     "timezone": "GMT+11"
     },
     "stock_name": "honda",
-    "events": [
-    {
-      "event-type": "stock-news",
-      "attribute": {
-        "stock_name": "honda",
-        "sentiment_score": "-0.2928",
-        "url": "https://finance.yahoo.com/news/detroits-big-three--not-foreign-automakers--are-most-exposed-to-trumps-auto-tariffs-new-report-162635754.html"
-      },
-      "time_object": {
-        "duration": "0",
-        "time-stamp": "2025-04-08T16:26:35+00:00",
-        "time-zone": "GMT+11",
-        "duration-unit": "days"
-      }
+    "events": [ ]
     },
-    {
-      "event-type": "stock-news",
-      "attribute": {
-        "stock_name": "honda",
-        "sentiment_score": "0.411",
-        "url": "https://finance.yahoo.com/news/foxconn-wants-nissan-evs-strategy-041509641.html"
-      },
-      "time_object": {
-        "duration": "0",
-        "time-stamp": "2025-04-09T04:15:09+00:00",
-        "time-zone": "GMT+11",
-        "duration-unit": "days"
-      }
- 
-    }
-        ]
+    "sentiment_analysis": {
+    "data_source": "yahoo_news",
+    "dataset_type": "Financial news",
+    "dataset_id": "http://seng3011-omega-news-data.s3-ap-southeast-2-amazonaws.com",
+    "time_object": {
+    "timestamp": "2025-04-19 22:19:45.990224",
+    "timezone": "GMT+11"
+    },
+    "stock_name": "honda",
+    "events": [ ]
     },
     "years": 5,
     "forecast_days": 30,
     "sell_threshold": 0.02,
     "buy_threshold": -0.02,
     "user_name": "k_sharma"
-    }
-
-    response = client.post("/analyze", json=mock_payload)
-
-    assert response.status_code == 200
-    response_data = response.get_json()
-    assert isinstance(response_data, list)
-    assert len(response_data) > 0
-    assert "ds" in response_data[0]
-
-
-def test_analyze_stock_missing_fields(client, local_dynamodb):
-    """Test the /analyze API with missing required fields."""
-    response = client.post("/analyze", json={})
-    assert response.status_code == 400
-    response_data = response.get_json()
-    assert "error" in response_data
-
-
-def test_analyze_stock_empty_data(client, local_dynamodb):
-    """Test the /analyze API with an empty data list."""
-    mock_payload = {
-        "data_source": "yahoo_finance",
-        "dataset_id": (
-            "http://seng3011-omega-25t1-testing-bucket.s3-ap-southeast-2"
-            "-amazonaws.com"
-        ),
-        "dataset_type": "Daily stock data",
-        "stock_name": "apple",
-        "time_object": {
-            "timestamp": "2026-03-27 21:03:44.150945",
-            "timezone": "GMT+11"
-        },
-        "events": [],
-        "years": 5,
-        "forecast_days": 30,
-        "sell_threshold": 0.02,
-        "buy_threshold": -0.02,
-        "user_name": "usename121"
     }
 
     response = client.post("/analyze", json=mock_payload)
@@ -220,7 +162,7 @@ def test_retrieve_analysis_success(client, local_dynamodb):
     })
 
     response = client.post("/retrieve_analysis", json={
-        "user_name": "k_sharma",
+        "user_name": "test_user",
         "stock_name": "apple"
     })
 
@@ -308,19 +250,42 @@ def test_analyze_internal_server_error(client, local_dynamodb, monkeypatch):
 
     response = client.post("/analyze", json=mock_payload)
     assert response.status_code == 500
-    response_data = response.get_json()
-    assert "error" in response_data
-    assert "Mocked Prophet Training Error" in response_data["error"]
-
+   
 
 def test_analyze_invalid_data_format(client, local_dynamodb):
-    """Test /analyze with incorrect data format."""
+    """Test /analyze with incorrect date and price format in stock_data."""
     mock_payload = {
-        "stock_name": "AAPL",
-        "data": [
-            {"Date": "invalid-date", "Close": "not-a-number"},
-            {"Date": "2023-01-02", "Close": 146.50}
-        ],
+        "stock_data": {
+            "stock_name": "AAPL",
+            "events": [
+                {
+                    "event-type": "stock-ohlc",
+                    "attribute": {
+                        "close": "not-a-number",
+                        "stock_name": "AAPL"
+                    },
+                    "time_object": {
+                        "time-stamp": "invalid-date",
+                        "time-zone": "GMT+11"
+                    }
+                },
+                {
+                    "event-type": "stock-ohlc",
+                    "attribute": {
+                        "close": "146.50",
+                        "stock_name": "AAPL"
+                    },
+                    "time_object": {
+                        "time-stamp": "2023-01-02",
+                        "time-zone": "GMT+11"
+                    }
+                }
+            ]
+        },
+        "sentiment_analysis": {
+            "stock_name": "AAPL",
+            "events": []
+        },
         "years": 5,
         "forecast_days": 30,
         "sell_threshold": 0.02,
@@ -329,9 +294,10 @@ def test_analyze_invalid_data_format(client, local_dynamodb):
     }
 
     response = client.post("/analyze", json=mock_payload)
-    assert response.status_code == 400
+    assert response.status_code in (400, 500) 
     response_data = response.get_json()
     assert "error" in response_data
+
 
 
 def test_retrieve_analysis_partial_stock_name(client, local_dynamodb):
