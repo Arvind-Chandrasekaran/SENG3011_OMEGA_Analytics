@@ -95,7 +95,7 @@ def test_analyze_stock_success(client, local_dynamodb):
       {
         "attribute": {
           "close": "214.29519653320312",
-          "stock_name": "honda"
+          "stock_name": "hinda"
         },
         "event-type": "stock-ohlc",
         "time_object": {
@@ -116,29 +116,48 @@ def test_analyze_stock_success(client, local_dynamodb):
     "timezone": "GMT+11"
     },
     "stock_name": "honda",
-    "events": [ ]
+    "events": [
+    {
+      "event-type": "stock-news",
+      "attribute": {
+        "stock_name": "honda",
+        "sentiment_score": "-0.2928",
+        "url": "https://finance.yahoo.com/news/detroits-big-three--not-foreign-automakers--are-most-exposed-to-trumps-auto-tariffs-new-report-162635754.html"
+      },
+      "time_object": {
+        "duration": "0",
+        "time-stamp": "2025-04-08T16:26:35+00:00",
+        "time-zone": "GMT+11",
+        "duration-unit": "days"
+      }
     },
-    "sentiment_analysis": {
-    "data_source": "yahoo_news",
-    "dataset_type": "Financial news",
-    "dataset_id": "http://seng3011-omega-news-data.s3-ap-southeast-2-amazonaws.com",
-    "time_object": {
-    "timestamp": "2025-04-19 22:19:45.990224",
-    "timezone": "GMT+11"
-    },
-    "stock_name": "honda",
-    "events": [ ]
+    {
+      "event-type": "stock-news",
+      "attribute": {
+        "stock_name": "honda",
+        "sentiment_score": "0.411",
+        "url": "https://finance.yahoo.com/news/foxconn-wants-nissan-evs-strategy-041509641.html"
+      },
+      "time_object": {
+        "duration": "0",
+        "time-stamp": "2025-04-09T04:15:09+00:00",
+        "time-zone": "GMT+11",
+        "duration-unit": "days"
+      }
+ 
+    }
+        ]
     },
     "years": 5,
     "forecast_days": 30,
     "sell_threshold": 0.02,
     "buy_threshold": -0.02,
-    "user_name": "k_sharma"
+    "user_name": "sharma"
     }
 
     response = client.post("/analyze", json=mock_payload)
 
-    assert response.status_code == 400
+    assert response.status_code == 200
     response_data = response.get_json()
     assert "error" in response_data
 
@@ -163,7 +182,7 @@ def test_retrieve_analysis_success(client, local_dynamodb):
 
     response = client.post("/retrieve_analysis", json={
         "user_name": "test_user",
-        "stock_name": "apple"
+        "stock_name": "AAPL"
     })
 
     assert response.status_code == 200
@@ -321,15 +340,71 @@ def test_retrieve_analysis_partial_stock_name(client, local_dynamodb):
 def test_analyze_missing_user_name(client, local_dynamodb):
     """Test /analyze with missing user_name."""
     mock_payload = {
-        "stock_name": "AAPL",
-        "data": [
-            {"Date": "2023-01-01", "Close": 145.32},
-            {"Date": "2023-01-02", "Close": 146.50}
-        ],
-        "years": 5,
-        "forecast_days": 30,
-        "sell_threshold": 0.02,
-        "buy_threshold": -0.02
+    "stock_data": {
+    "data_source": "yahoo_finance",
+    "dataset_id": "http://seng3011-omega-25t1-testing-bucket.s3-ap-southeast-2-amazonaws.com",
+    "dataset_type": "Daily stock data",
+    "stock_name": "honda",
+    "time_object": {
+      "timestamp": "2026-03-27 21:03:44.150945",
+      "timezone": "GMT+11"
+    },
+    "events": [
+      {
+        "attribute": {
+          "close": "244.47000122070312",
+          "stock_name": "honda"
+        },
+        "event-type": "stock-ohlc",
+        "time_object": {
+          "duration": "0",
+          "duration-unit": "days",
+          "time-stamp": "2026-02-18",
+          "time-zone": "GMT+11"
+        }
+      },
+      {
+        "attribute": {
+          "close": "214.29519653320312",
+          "stock_name": "honda"
+        },
+        "event-type": "stock-ohlc",
+        "time_object": {
+          "duration": "0",
+          "duration-unit": "days",
+          "time-stamp": "2026-03-18",
+          "time-zone": "GMT+11"
+        }
+      }
+    ]
+    },
+    "sentiment_analysis": {
+    "data_source": "yahoo_news",
+    "dataset_type": "Financial news",
+    "dataset_id": "http://seng3011-omega-news-data.s3-ap-southeast-2-amazonaws.com",
+    "time_object": {
+    "timestamp": "2025-04-19 22:19:45.990224",
+    "timezone": "GMT+11"
+    },
+    "stock_name": "honda",
+    "events": [ ]
+    },
+    "sentiment_analysis": {
+    "data_source": "yahoo_news",
+    "dataset_type": "Financial news",
+    "dataset_id": "http://seng3011-omega-news-data.s3-ap-southeast-2-amazonaws.com",
+    "time_object": {
+    "timestamp": "2025-04-19 22:19:45.990224",
+    "timezone": "GMT+11"
+    },
+    "stock_name": "honda",
+    "events": [ ]
+    },
+    "years": 5,
+    "forecast_days": 30,
+    "sell_threshold": 0.02,
+    "buy_threshold": -0.02,
+    "user_name": ""
     }
 
     response = client.post("/analyze", json=mock_payload)
@@ -341,15 +416,58 @@ def test_analyze_missing_user_name(client, local_dynamodb):
 def test_analyze_insufficient_data(client, local_dynamodb):
     """Test /analyze with too few data points."""
     mock_payload = {
-        "stock_name": "AAPL",
-        "data": [
-            {"Date": "2023-01-01", "Close": 145.32}
-        ],
-        "years": 5,
-        "forecast_days": 30,
-        "sell_threshold": 0.02,
-        "buy_threshold": -0.02,
-        "user_name": "test_user"
+    "stock_data": {
+    "data_source": "yahoo_finance",
+    "dataset_id": "http://seng3011-omega-25t1-testing-bucket.s3-ap-southeast-2-amazonaws.com",
+    "dataset_type": "Daily stock data",
+    "stock_name": "honda",
+    "time_object": {
+      "timestamp": "2026-03-27 21:03:44.150945",
+      "timezone": "GMT+11"
+    },
+    "events": [
+      {
+        "attribute": {
+          "close": "244.47000122070312",
+          "stock_name": "honda"
+        },
+        "event-type": "stock-ohlc",
+        "time_object": {
+          "duration": "0",
+          "duration-unit": "days",
+          "time-stamp": "2026-02-18",
+          "time-zone": "GMT+11"
+        }
+      }
+    ]
+    },
+    "sentiment_analysis": {
+    "data_source": "yahoo_news",
+    "dataset_type": "Financial news",
+    "dataset_id": "http://seng3011-omega-news-data.s3-ap-southeast-2-amazonaws.com",
+    "time_object": {
+    "timestamp": "2025-04-19 22:19:45.990224",
+    "timezone": "GMT+11"
+    },
+    "stock_name": "honda",
+    "events": [ ]
+    },
+    "sentiment_analysis": {
+    "data_source": "yahoo_news",
+    "dataset_type": "Financial news",
+    "dataset_id": "http://seng3011-omega-news-data.s3-ap-southeast-2-amazonaws.com",
+    "time_object": {
+    "timestamp": "2025-04-19 22:19:45.990224",
+    "timezone": "GMT+11"
+    },
+    "stock_name": "honda",
+    "events": [ ]
+    },
+    "years": 5,
+    "forecast_days": 30,
+    "sell_threshold": 0.02,
+    "buy_threshold": -0.02,
+    "user_name": "k_sharma"
     }
 
     response = client.post("/analyze", json=mock_payload)
