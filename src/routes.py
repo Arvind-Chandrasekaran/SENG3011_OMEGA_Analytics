@@ -32,7 +32,7 @@ table = dynamodb.Table(TABLE_NAME)
 table_users = dynamodb.Table("users") 
 
 SKIP_USER_CHECK = os.environ.get("SKIP_USER_CHECK", "false").lower() == "true"
-print(SKIP_USER_CHECK) ###########################
+
 
 # Routes for the API
 @routes.route("/analyze", methods=["POST"])
@@ -57,13 +57,13 @@ def analyze():
         buy_threshold = request_data.get("buy_threshold", -0.02)
         user_name = request_data.get("user_name")
 
+        if not SKIP_USER_CHECK:
+            if not user_name:
+                return jsonify({"error": "user_name is required"}), 400
         
-        if not user_name and not SKIP_USER_CHECK:
-            print("HELOOOOOOOOOOOOOOOOOOOOOOOO1")
-            return jsonify({"error": "user_name is required"}), 400
-        if not table_users.get_item(Key={"user_name": user_name}).get("Item") and not SKIP_USER_CHECK:
-            return jsonify({"error": "UserNotRegistered"}), 401
-            print("HELOOOOOOOOOOOOOOOOOOOOOOOO2")
+            if not table_users.get_item(Key={"user_name": user_name}).get("Item"):
+                return jsonify({"error": "UserNotRegistered"}), 401
+            
         
         
         if (
@@ -110,11 +110,11 @@ def retrieve_analysis():
         if not user_name or not stock_name:
             return jsonify({"error": "Missing Field"}), 400
         
-        
-        if not user_name and not SKIP_USER_CHECK:
-            return jsonify({"error": "user_name is required"}), 400
-        if not table_users.get_item(Key={"user_name": user_name}).get("Item") and not SKIP_USER_CHECK:
-            return jsonify({"error": "UserNotRegistered"}), 401
+        if not SKIP_USER_CHECK:
+            if not user_name:
+                return jsonify({"error": "user_name is required"}), 400
+            if not table_users.get_item(Key={"user_name": user_name}).get("Item"):
+                return jsonify({"error": "UserNotRegistered"}), 401
         
 
         response = table.query(
