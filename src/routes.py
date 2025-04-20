@@ -4,10 +4,12 @@ from analysis import (
     preprocess_data_prophet,
     analyze_stock,
     save_stock_data_to_dynamodb,
-    convert_format_
+    convert_format_with_sentiment
 )
 import boto3
 from pprint import pprint
+from datetime import datetime, timezone
+from botocore.exceptions import ClientError
 
 routes = Blueprint("routes", __name__)
 
@@ -25,7 +27,10 @@ TABLE_NAME = "StockAnalytics"
 table = dynamodb.Table(TABLE_NAME)
 
 
+# Second dynamoDB table for registering users 
+table_users = dynamodb.Table("users") 
 
+SKIP_USER_CHECK = os.environ.get("SKIP_USER_CHECK", "false").lower() == "true"
 
 
 # Routes for the API
@@ -39,8 +44,9 @@ def analyze():
 
         if not request_data_new:
             return jsonify({"error": "No data received"}), 400
+       
         
-        request_data = convert_format_(request_data_new)
+        request_data = convert_format_with_sentiment(request_data_new)
 
         stock_name = request_data.get("stock_name")
         stock_data = request_data.get("data")
@@ -50,6 +56,15 @@ def analyze():
         buy_threshold = request_data.get("buy_threshold", -0.02)
         user_name = request_data.get("user_name")
 
+        if not SKIP_USER_CHECK:
+            if not user_name:
+                return jsonify({"error": "user_name is required"}), 400
+        
+            if not table_users.get_item(Key={"user_name": user_name}).get("Item"):
+                return jsonify({"error": "UserNotRegistered"}), 401
+            
+        
+        
         if (
             not stock_name or not stock_data or not years
             or not forecast_days or not sell_threshold
@@ -62,15 +77,15 @@ def analyze():
 
         df = preprocess_data_prophet(stock_data, years)
 
-        print("before analyse")
         df_a, model_a = analyze_stock(
             df, forecast_days, sell_threshold, buy_threshold
         )
-        print("after analyse")
         
         
         print("Printing some good stuff:")
         pprint(df_a.to_dict(orient="records"))
+
+        
 
         save_stock_data_to_dynamodb(user_name, stock_name, df_a)
 
@@ -93,6 +108,13 @@ def retrieve_analysis():
 
         if not user_name or not stock_name:
             return jsonify({"error": "Missing Field"}), 400
+        
+        if not SKIP_USER_CHECK:
+            if not user_name:
+                return jsonify({"error": "user_name is required"}), 400
+            if not table_users.get_item(Key={"user_name": user_name}).get("Item"):
+                return jsonify({"error": "UserNotRegistered"}), 401
+        
 
         response = table.query(
             KeyConditionExpression=(
@@ -112,8 +134,35 @@ def retrieve_analysis():
         return jsonify({"error": str(e)}), 500
 
 
+@routes.route("/register", methods=["POST"])
+def register():
+    """
+    API endpoint to register the a new user to the analytics microservice
+    """
+    payload   = request.get_json() or {}
+    user_name = payload.get("user_name")
+    if not user_name:
+        return jsonify({"error": "user_name is required"}), 400
+
+    try:
+        # 1) Check duplicate
+        if table_users.get_item(Key={"user_name": user_name}).get("Item"):
+            return jsonify({"error": "UserAlreadyExists"}), 409
+
+        # 2) Write new user
+        table_users.put_item(Item={
+            "user_name":  user_name
+        })
+        return jsonify({"message": f"Registered {user_name}"}), 201
+
+    except ClientError:
+        return jsonify({"error": "Internal server error"}), 500
+
+
 def register_routes(app):
     """
     Register the routes with the Flask app.
     """
     app.register_blueprint(routes)
+
+
