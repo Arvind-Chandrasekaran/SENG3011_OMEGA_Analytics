@@ -56,11 +56,7 @@ def analyze():
         buy_threshold = request_data.get("buy_threshold", -0.02)
         user_name = request_data.get("user_name")
 
-        if not user_name:
-            return jsonify({"error": "user_name is required"}), 400
-        if not table_users.get_item(Key={"user_name": user_name}).get("Item"):
-            return jsonify({"error": "UserNotRegistered"}), 401
-
+        
         if (
             not stock_name or not stock_data or not years
             or not forecast_days or not sell_threshold
@@ -80,6 +76,11 @@ def analyze():
         
         print("Printing some good stuff:")
         pprint(df_a.to_dict(orient="records"))
+
+        if not user_name:
+            return jsonify({"error": "user_name is required"}), 400
+        if not table_users.get_item(Key={"user_name": user_name}).get("Item"):
+            return jsonify({"error": "UserNotRegistered"}), 401
 
         save_stock_data_to_dynamodb(user_name, stock_name, df_a)
 

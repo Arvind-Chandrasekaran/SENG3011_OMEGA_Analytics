@@ -3,47 +3,59 @@
 import pytest
 import pandas as pd
 from analysis import (
-    convert_format_,
+    convert_format_with_sentiment,
     preprocess_data_prophet,
     analyze_stock
 )
 
 
-# Test that valid stock events are correctly converted to legacy format
-def test_convert_format_valid_stock_events():
+import pytest
+import pandas as pd
+
+
+# Test that valid stock and sentiment events are correctly merged into legacy format
+def test_convert_format_valid_stock_and_sentiment_events():
     input_data = {
-        "stock_name": "AAPL",
+        "stock_data": {
+            "stock_name": "AAPL",
+            "events": [
+                {
+                    "event-type": "stock-ohlc",
+                    "attribute": {
+                        "close": "145.67",
+                        "stock_name": "AAPL"
+                    },
+                    "time_object": {
+                        "time-stamp": "2023-01-01",
+                        "time-zone": "GMT+11"
+                    }
+                }
+            ]
+        },
+        "sentiment_analysis": {
+            "stock_name": "AAPL",
+            "events": [
+                {
+                    "event-type": "stock-sentiment",
+                    "attribute": {
+                        "score": "0.85",
+                        "stock_name": "AAPL"
+                    },
+                    "time_object": {
+                        "time-stamp": "2023-01-01",
+                        "time-zone": "GMT+11"
+                    }
+                }
+            ]
+        },
         "user_name": "tester",
         "years": 3,
         "forecast_days": 15,
         "sell_threshold": 0.05,
-        "buy_threshold": -0.03,
-        "events": [
-            {
-                "event-type": "stock-ohlc",
-                "attribute": {
-                    "close": "145.67",
-                    "stock_name": "AAPL"
-                },
-                "time_object": {
-                    "time-stamp": "2023-01-01",
-                    "time-zone": "GMT+11"
-                }
-            },
-            {
-                "event-type": "stock news",
-                "title": "Ignore this",
-                "attributes": {
-                    "summary": "Some headline"
-                },
-                "time_object": {
-                    "time-stamp": "2023-01-01T08:00:00"
-                }
-            }
-        ]
+        "buy_threshold": -0.03
     }
 
-    result = convert_format_(input_data)
+    result = convert_format_with_sentiment(input_data)
 
     assert result["stock_name"] == "AAPL"
     assert result["user_name"] == "tester"
@@ -55,77 +67,77 @@ def test_convert_format_valid_stock_events():
     assert len(result["data"]) == 1
     assert result["data"][0]["Date"] == "2023-01-01"
     assert result["data"][0]["Close"] == 145.67
+    assert result["data"][0]["Sentiment"] == 0.85
 
-
-# Test that empty event list returns empty data in legacy format
-def test_convert_format_no_events():
+# Test that empty event lists return empty data
+def test_convert_format_no_stock_or_sentiment_events():
     input_data = {
-        "stock_name": "AAPL",
+        "stock_data": {
+            "stock_name": "AAPL",
+            "events": []
+        },
+        "sentiment_analysis": {
+            "stock_name": "AAPL",
+            "events": []
+        },
         "user_name": "tester",
         "years": 3,
         "forecast_days": 15,
         "sell_threshold": 0.05,
-        "buy_threshold": -0.03,
-        "events": []
+        "buy_threshold": -0.03
     }
 
-    legacy_request_data = convert_format_(input_data)
+    legacy_request_data = convert_format_with_sentiment(input_data)
 
     assert legacy_request_data["data"] == []
 
-
-# Test that malformed events raise an error with appropriate missing key
-def test_convert_format_invalid_format():
+# Test that malformed stock events raise an error
+def test_convert_format_invalid_stock_format():
     input_data = {
-        "events": [
-            {
-                "event-type": "stock-ohlc",
-                "attribute": {
-                    "close": "145.67",
-                    "stock_name": "AAPL"
+        "stock_data": {
+            "events": [
+                {
+                    "event-type": "stock-ohlc",
+                    "attribute": {
+                        "close": "145.67"
+                        # Missing stock_name key inside attribute
+                    }
                 }
-            },
-            {
-                "event-type": "stock news",
-                "title": "Ignore this",
-                "attributes": {
-                    "summary": "Some headline"
-                },
-                "time_object": {
-                    "time-stamp": "2023-01-01T08:00:00"
-                }
-            }
-        ]
+            ]
+        },
+        "sentiment_analysis": {
+            "events": []
+        },
+        "user_name": "tester"
     }
 
     with pytest.raises(Exception) as excinfo:
-        convert_format_(input_data)
+        convert_format_with_sentiment(input_data)
 
-    assert str(excinfo.value) in ["'attribute'", "'close'", "'time_object'"]
+    assert "'time_object'" in str(excinfo.value) or "'time-stamp'" in str(excinfo.value)
 
-
-# Test that preprocessing returns filtered and formatted DataFrame
-def test_preprocess_data_prophet_filters_and_formats():
+# Test that preprocess_data returns filtered and formatted DataFrame (now including Sentiment)
+def test_preprocess_data_prophet_with_sentiment():
     raw = [
-        {"Date": "2021-01-01", "Close": 100},
-        {"Date": "2024-01-01", "Close": 200}
+        {"Date": "2021-01-01", "Close": 100, "Sentiment": 0.5},
+        {"Date": "2024-01-01", "Close": 200, "Sentiment": -0.2}
     ]
     df = preprocess_data_prophet(raw, years=2)
 
     assert "ds" in df.columns
     assert "y" in df.columns
+    assert "sentiment" in df.columns
     assert pd.api.types.is_datetime64_any_dtype(df["ds"])
     assert all(df["ds"] >= pd.to_datetime("2022-01-01"))
 
-
-# Test that Prophet generates a forecast and signal columns correctly
-def test_analyze_stock_basic_forecast():
+# Test that analyze_stock uses sentiment as regressor and generates forecast
+def test_analyze_stock_with_sentiment_regressor():
     raw = [
-        {"Date": "2023-01-01", "Close": 100},
-        {"Date": "2023-01-02", "Close": 105},
-        {"Date": "2023-01-03", "Close": 110},
-        {"Date": "2023-01-04", "Close": 115},
-        {"Date": "2023-01-05", "Close": 120}
+        {"Date": "2023-01-01", "Close": 100, "Sentiment": 0.5},
+        {"Date": "2023-01-02", "Close": 105, "Sentiment": 0.6},
+        {"Date": "2023-01-03", "Close": 110, "Sentiment": 0.7},
+        {"Date": "2023-01-04", "Close": 115, "Sentiment": 0.8},
+        {"Date": "2023-01-05", "Close": 120, "Sentiment": 0.9}
     ]
     df = preprocess_data_prophet(raw)
     forecast_df, model = analyze_stock(df, forecast_days=5)
