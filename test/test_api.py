@@ -9,7 +9,7 @@ data = {
     "data_source": "yahoo_finance",
     "dataset_id": "http://seng3011-omega-25t1-testing-bucket.s3-ap-southeast-2-amazonaws.com",
     "dataset_type": "Daily stock data",
-    "stock_name": "apple",
+    "stock_name": "honda",
     "time_object": {
       "timestamp": "2026-03-27 21:03:44.150945",
       "timezone": "GMT+11"
@@ -88,7 +88,7 @@ data = {
     "forecast_days": 30,
     "sell_threshold": 0.02,
     "buy_threshold": -0.02,
-    "user_name": "usename99999"
+    "user_name": "sharma"
 }
 
 response = requests.post(url, json=data)

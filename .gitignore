@@ -2,3 +2,6 @@ venv/
 __pycache__/
 .coverage
 .vscode/
+test/test_register.py
+test/test_retrieve.py
+test/test_api.py
