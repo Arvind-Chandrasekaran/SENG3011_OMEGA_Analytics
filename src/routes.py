@@ -107,10 +107,7 @@ def retrieve_analysis():
         if not user_name or not stock_name:
             return jsonify({"error": "Missing Field"}), 400
         
-        if not user_name and not SKIP_USER_CHECK:
-            return jsonify({"error": "user_name is required"}), 400
-        if not table_users.get_item(Key={"user_name": user_name}).get("Item") and not SKIP_USER_CHECK:
-            return jsonify({"error": "UserNotRegistered"}), 401
+        
 
         response = table.query(
             KeyConditionExpression=(
