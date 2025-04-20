@@ -50,22 +50,19 @@ def save_stock_data_to_dynamodb(user_name, stock_symbol, forecast_df):
 
 
 def preprocess_data_prophet(data, years=5):
-    """
-    Preprocess stock data for Prophet analysis.
-    """
     df = pd.DataFrame(data)
 
     try:
-        df["Date"] = pd.to_datetime(
-                                    df["Date"],
-                                    format="%Y-%m-%d",
-                                    errors="coerce"
-                                   )
-
+        df["Date"] = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce")
     except Exception as e:
         raise ValueError(f"Error parsing dates: {e}")
 
-    df = df[["Date", "Close"]].rename(columns={"Date": "ds", "Close": "y"})
+    df = df[["Date", "Close", "Sentiment"]].rename(columns={
+        "Date": "ds",
+        "Close": "y",
+        "Sentiment": "sentiment"
+    })
+
     df["ds"] = df["ds"].dt.tz_localize(None)
 
     cutoff_date = df["ds"].max() - pd.DateOffset(years=years)
@@ -81,9 +78,18 @@ def analyze_stock(
     Train Prophet model on stock data and provide buy/sell recommendations.
     """
     model = Prophet(daily_seasonality=True)
+    
+    if "sentiment" in df.columns:
+        model.add_regressor("sentiment")
+    
     model.fit(df)
 
     future = model.make_future_dataframe(periods=forecast_days)
+
+    if "sentiment" in df.columns:
+        future = future.merge(df[["ds", "sentiment"]], on="ds", how="left")
+        future["sentiment"].fillna(method="ffill", inplace=True)  # Extend sentiment forward
+
     forecast = model.predict(future)
 
     forecast_df = forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]].copy()
@@ -177,3 +183,44 @@ def convert_format_(request_data):
         print("Error in convert_event_format_to_legacy:", str(e))
         raise
 
+
+def convert_format_with_sentiment(request_data):
+    try:
+        stock_events = request_data.get("stock_data", {}).get("events", [])
+        sentiment_events = request_data.get("sentiment_analysis", {}).get("events", [])
+
+        # Step 1: Parse stock close prices
+        stock_data = []
+        for event in stock_events:
+            if event["event-type"] == "stock-ohlc":
+                date = event["time_object"]["time-stamp"]
+                close_price = float(event["attribute"]["close"])
+                stock_data.append({"Date": date, "Close": round(close_price, 2)})
+
+        # Step 2: Parse sentiment scores
+        sentiment_data = {}
+        for event in sentiment_events:
+            if event["event-type"] == "stock-news":
+                date = event["time_object"]["time-stamp"]
+                score = float(event["attribute"]["sentiment_score"])
+                sentiment_data[date] = round(score, 3)
+
+        # Step 3: Merge sentiment into stock_data
+        for entry in stock_data:
+            entry["Sentiment"] = sentiment_data.get(entry["Date"], 0.0)  # default to 0.0
+
+        legacy_request_data = {
+            "stock_name": request_data["stock_data"].get("stock_name"),
+            "data": stock_data,
+            "years": request_data.get("years", 5),
+            "forecast_days": request_data.get("forecast_days", 30),
+            "sell_threshold": request_data.get("sell_threshold", 0.02),
+            "buy_threshold": request_data.get("buy_threshold", -0.02),
+            "user_name": request_data.get("user_name")
+        }
+
+        return legacy_request_data
+
+    except Exception as e:
+        print("Error in convert_format_with_sentiment:", str(e))
+        raise

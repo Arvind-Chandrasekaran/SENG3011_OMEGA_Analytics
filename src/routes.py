@@ -4,7 +4,8 @@ from analysis import (
     preprocess_data_prophet,
     analyze_stock,
     save_stock_data_to_dynamodb,
-    convert_format_
+    convert_format_,
+    convert_format_with_sentiment
 )
 import boto3
 from pprint import pprint
@@ -40,7 +41,7 @@ def analyze():
         if not request_data_new:
             return jsonify({"error": "No data received"}), 400
         
-        request_data = convert_format_(request_data_new)
+        request_data = convert_format_with_sentiment(request_data_new)
 
         stock_name = request_data.get("stock_name")
         stock_data = request_data.get("data")
@@ -62,11 +63,9 @@ def analyze():
 
         df = preprocess_data_prophet(stock_data, years)
 
-        print("before analyse")
         df_a, model_a = analyze_stock(
             df, forecast_days, sell_threshold, buy_threshold
         )
-        print("after analyse")
         
         
         print("Printing some good stuff:")
