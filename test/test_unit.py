@@ -99,21 +99,25 @@ def test_convert_format_valid_stock_and_sentiment_events():
     "forecast_days": 30,
     "sell_threshold": 0.02,
     "buy_threshold": -0.02,
-    "user_name": "sharma"
+    "user_name": "k_sharma"
     }
 
     result = convert_format_with_sentiment(input_data)
 
-    assert result["stock_name"] == "AAPL"
-    assert result["user_name"] == "tester"
-    assert result["years"] == 3
-    assert result["forecast_days"] == 15
-    assert result["sell_threshold"] == 0.05
-    assert result["buy_threshold"] == -0.03
+    assert result["stock_name"] == "honda"
+    assert result["user_name"] == "k_sharma"
+    assert result["years"] == 5
+    assert result["forecast_days"] == 30
+    assert result["sell_threshold"] == 0.02
+    assert result["buy_threshold"] == -0.02
     assert isinstance(result["data"], list)
-    assert len(result["data"]) == 1
-    assert result["data"][0]["Date"] == "2023-01-01"
-    assert result["data"][0]["Close"] == 145.67
+    assert len(result["data"]) == 2
+    assert result["data"][0]["Date"] == "2026-02-18"
+    assert result["data"][0]["Close"] == 244.47
+    assert result["data"][0]["Sentiment"] == 0.0
+    assert result["data"][1]["Date"] == "2026-03-18"
+    assert result["data"][1]["Close"] == 214.3
+    assert result["data"][1]["Sentiment"] == 0.0
     
 
 # Test that empty event lists return empty data
