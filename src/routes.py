@@ -17,7 +17,9 @@ routes = Blueprint("routes", __name__)
 DYNAMODB_ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT")
 
 if DYNAMODB_ENDPOINT:
-    dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2", endpoint_url=DYNAMODB_ENDPOINT)
+    dynamodb = boto3.resource(
+        "dynamodb", region_name="ap-southeast-2", endpoint_url=DYNAMODB_ENDPOINT
+    )
 
 else:
     dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
@@ -33,7 +35,10 @@ table_users = dynamodb.Table("users")
 SKIP_USER_CHECK = os.environ.get("SKIP_USER_CHECK", "false").lower() == "true"
 
 # External API for pre processing
-PREPROCESS_URL = "https://h0gn7fm71g.execute-api.ap-southeast-2.amazonaws.com/dev/preprocess"
+PREPROCESS_URL = (
+    "https://h0gn7fm71g.execute-api.ap-southeast-2.amazonaws.com/dev/preprocess"
+)
+
 
 # Routes for the API
 @routes.route("/analyze", methods=["POST"])
@@ -46,14 +51,22 @@ def analyze():
 
         if not request_data_new:
             return jsonify({"error": "No data received"}), 400
-        
+
         # Pre processing
         data_to_be_cleaned = [request_data_new["stock_data"]]
         response = requests.post(PREPROCESS_URL, json=data_to_be_cleaned)
 
-        if (response.json()['cleaned_data'][0]['events'][0]['time_object']['timestamp'] is not None) and (response.json()['cleaned_data'][0]['events'][0]['time_object']['duration_unit'] is not None):
+        if (
+            response.json()["cleaned_data"][0]["events"][0]["time_object"]["timestamp"]
+            is not None
+        ) and (
+            response.json()["cleaned_data"][0]["events"][0]["time_object"][
+                "duration_unit"
+            ]
+            is not None
+        ):
             print("inside pre processing")
-            request_data_new['stock_data'] == response
+            request_data_new["stock_data"] == response
 
         request_data = convert_format_with_sentiment(request_data_new)
 
