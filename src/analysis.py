@@ -7,11 +7,12 @@ import boto3
 import os
 
 
-
 DYNAMODB_ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT")
 print("before")
 if DYNAMODB_ENDPOINT:
-    dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2", endpoint_url=DYNAMODB_ENDPOINT)
+    dynamodb = boto3.resource(
+        "dynamodb", region_name="ap-southeast-2", endpoint_url=DYNAMODB_ENDPOINT
+    )
     print("hello 11111")
 else:
     dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
@@ -29,10 +30,8 @@ def save_stock_data_to_dynamodb(user_name, stock_symbol, forecast_df):
         item = {
             "user_name": user_name,
             "stock_symbol#date": (
-                f"{stock_symbol}#"
-                f"{row['ds'].strftime('%Y-%m-%d')}"  # Composite Key
+                f"{stock_symbol}#{row['ds'].strftime('%Y-%m-%d')}"  # Composite Key
             ),
-
             "stock_symbol": stock_symbol,
             "date": row["ds"].strftime("%Y-%m-%d"),
             "yhat": Decimal(str(row["yhat"])),
@@ -57,11 +56,9 @@ def preprocess_data_prophet(data, years=5):
     except Exception as e:
         raise ValueError(f"Error parsing dates: {e}")
 
-    df = df[["Date", "Close", "Sentiment"]].rename(columns={
-        "Date": "ds",
-        "Close": "y",
-        "Sentiment": "sentiment"
-    })
+    df = df[["Date", "Close", "Sentiment"]].rename(
+        columns={"Date": "ds", "Close": "y", "Sentiment": "sentiment"}
+    )
 
     df["ds"] = df["ds"].dt.tz_localize(None)
 
@@ -71,24 +68,24 @@ def preprocess_data_prophet(data, years=5):
     return df
 
 
-def analyze_stock(
-    df, forecast_days=30, sell_threshold=0.02, buy_threshold=-0.02
-):
+def analyze_stock(df, forecast_days=30, sell_threshold=0.02, buy_threshold=-0.02):
     """
     Train Prophet model on stock data and provide buy/sell recommendations.
     """
     model = Prophet(daily_seasonality=True)
-    
+
     if "sentiment" in df.columns:
         model.add_regressor("sentiment")
-    
+
     model.fit(df)
 
     future = model.make_future_dataframe(periods=forecast_days)
 
     if "sentiment" in df.columns:
         future = future.merge(df[["ds", "sentiment"]], on="ds", how="left")
-        future["sentiment"].fillna(method="ffill", inplace=True)  # Extend sentiment forward
+        future["sentiment"].fillna(
+            method="ffill", inplace=True
+        )  # Extend sentiment forward
 
     forecast = model.predict(future)
 
@@ -96,11 +93,11 @@ def analyze_stock(
     forecast_df["Rolling_Max"] = forecast_df["yhat"].rolling(window=5).max()
     forecast_df["Rolling_Min"] = forecast_df["yhat"].rolling(window=5).min()
 
-    forecast_df["Sell_Signal"] = (
-        forecast_df["yhat"] >= forecast_df["Rolling_Max"].shift(1)
-    )
-    forecast_df["Buy_Signal"] = (
-        forecast_df["yhat"] <= forecast_df["Rolling_Min"].shift(1)
+    forecast_df["Sell_Signal"] = forecast_df["yhat"] >= forecast_df[
+        "Rolling_Max"
+    ].shift(1)
+    forecast_df["Buy_Signal"] = forecast_df["yhat"] <= forecast_df["Rolling_Min"].shift(
+        1
     )
 
     forecast_df["Price_Change"] = forecast_df["yhat"].pct_change()
@@ -132,14 +129,13 @@ def send_results_to_server(callback_url, stock_name, forecast_df, user_name):
             }
         else:
             return {
-                "error": f"Failed to send data. Status code: "
-                f"{response.status_code}",
+                "error": f"Failed to send data. Status code: {response.status_code}",
                 "server_response": response.text,
             }
 
     except Exception as e:
         return {"error": str(e)}
-    
+
 
 def convert_format_with_sentiment(request_data):
     try:
@@ -164,7 +160,9 @@ def convert_format_with_sentiment(request_data):
 
         # Step 3: Merge sentiment into stock_data
         for entry in stock_data:
-            entry["Sentiment"] = sentiment_data.get(entry["Date"], 0.0)  # default to 0.0
+            entry["Sentiment"] = sentiment_data.get(
+                entry["Date"], 0.0
+            )  # default to 0.0
 
         legacy_request_data = {
             "stock_name": request_data["stock_data"].get("stock_name"),
@@ -173,7 +171,7 @@ def convert_format_with_sentiment(request_data):
             "forecast_days": request_data.get("forecast_days", 30),
             "sell_threshold": request_data.get("sell_threshold", 0.02),
             "buy_threshold": request_data.get("buy_threshold", -0.02),
-            "user_name": request_data.get("user_name")
+            "user_name": request_data.get("user_name"),
         }
 
         return legacy_request_data
