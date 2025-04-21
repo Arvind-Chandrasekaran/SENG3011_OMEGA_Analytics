@@ -51,10 +51,9 @@ def analyze():
         data_to_be_cleaned = [request_data_new["stock_data"]]
         response = requests.post(PREPROCESS_URL, json=data_to_be_cleaned)
 
-        if (response.json()['cleaned_data'][0]['events'][0]['time_object']['timestamp'] != None) and (response.json()['cleaned_data'][0]['events'][0]['time_object']['duration_unit'] != None):
+        if (response.json()['cleaned_data'][0]['events'][0]['time_object']['timestamp'] is not None) and (response.json()['cleaned_data'][0]['events'][0]['time_object']['duration_unit'] is not None):
             print("inside pre processing")
             request_data_new['stock_data'] == response
-
 
         request_data = convert_format_with_sentiment(request_data_new)
 
