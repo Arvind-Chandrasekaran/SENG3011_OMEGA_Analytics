@@ -5,3 +5,4 @@ __pycache__/
 test/test_register.py
 test/test_retrieve.py
 test/test_api.py
+test/test_external_api3.py
