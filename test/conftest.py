@@ -5,12 +5,7 @@ import sys
 import os
 
 
-sys.path.insert(
-    0,
-    os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "../src")
-    )
-)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 from src.app import app  # noqa: E402
 
@@ -35,17 +30,16 @@ def mock_dynamodb():
             TableName="StockAnalytics",
             KeySchema=[
                 {"AttributeName": "user_name", "KeyType": "HASH"},
-                {"AttributeName": "stock_symbol#date", "KeyType": "RANGE"}
+                {"AttributeName": "stock_symbol#date", "KeyType": "RANGE"},
             ],
             AttributeDefinitions=[
                 {"AttributeName": "user_name", "AttributeType": "S"},
                 {"AttributeName": "stock_symbol#date", "AttributeType": "S"},
             ],
             ProvisionedThroughput={
-                                    "ReadCapacityUnits": 1,
-                                    "WriteCapacityUnits": 1,
-                                   },
-
+                "ReadCapacityUnits": 1,
+                "WriteCapacityUnits": 1,
+            },
         )
         table.wait_until_exists()
 

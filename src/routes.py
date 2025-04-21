@@ -4,11 +4,10 @@ from analysis import (
     preprocess_data_prophet,
     analyze_stock,
     save_stock_data_to_dynamodb,
-    convert_format_with_sentiment
+    convert_format_with_sentiment,
 )
 import boto3
 from pprint import pprint
-from datetime import datetime, timezone
 from botocore.exceptions import ClientError
 
 routes = Blueprint("routes", __name__)
@@ -17,7 +16,9 @@ routes = Blueprint("routes", __name__)
 DYNAMODB_ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT")
 print("before")
 if DYNAMODB_ENDPOINT:
-    dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2", endpoint_url=DYNAMODB_ENDPOINT)
+    dynamodb = boto3.resource(
+        "dynamodb", region_name="ap-southeast-2", endpoint_url=DYNAMODB_ENDPOINT
+    )
     print("hello 11111")
 else:
     dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-2")
@@ -27,8 +28,8 @@ TABLE_NAME = "StockAnalytics"
 table = dynamodb.Table(TABLE_NAME)
 
 
-# Second dynamoDB table for registering users 
-table_users = dynamodb.Table("users") 
+# Second dynamoDB table for registering users
+table_users = dynamodb.Table("users")
 
 SKIP_USER_CHECK = os.environ.get("SKIP_USER_CHECK", "false").lower() == "true"
 
@@ -44,8 +45,7 @@ def analyze():
 
         if not request_data_new:
             return jsonify({"error": "No data received"}), 400
-       
-        
+
         request_data = convert_format_with_sentiment(request_data_new)
 
         stock_name = request_data.get("stock_name")
@@ -59,17 +59,19 @@ def analyze():
         if not SKIP_USER_CHECK:
             if not user_name:
                 return jsonify({"error": "user_name is required"}), 400
-        
+
             if not table_users.get_item(Key={"user_name": user_name}).get("Item"):
                 return jsonify({"error": "UserNotRegistered"}), 401
-            
-        
-        
+
         if (
-            not stock_name or not stock_data or not years
-            or not forecast_days or not sell_threshold
-            or not buy_threshold or not user_name
-           ):
+            not stock_name
+            or not stock_data
+            or not years
+            or not forecast_days
+            or not sell_threshold
+            or not buy_threshold
+            or not user_name
+        ):
             return jsonify({"error": "Missing Field"}), 400
 
         if len(stock_data) < 2:
@@ -77,15 +79,10 @@ def analyze():
 
         df = preprocess_data_prophet(stock_data, years)
 
-        df_a, model_a = analyze_stock(
-            df, forecast_days, sell_threshold, buy_threshold
-        )
-        
-        
+        df_a, model_a = analyze_stock(df, forecast_days, sell_threshold, buy_threshold)
+
         print("Printing some good stuff:")
         pprint(df_a.to_dict(orient="records"))
-
-        
 
         save_stock_data_to_dynamodb(user_name, stock_name, df_a)
 
@@ -108,27 +105,25 @@ def retrieve_analysis():
 
         if not user_name or not stock_name:
             return jsonify({"error": "Missing Field"}), 400
-        
+
         if not SKIP_USER_CHECK:
             if not user_name:
                 return jsonify({"error": "user_name is required"}), 400
             if not table_users.get_item(Key={"user_name": user_name}).get("Item"):
                 return jsonify({"error": "UserNotRegistered"}), 401
-        
 
         response = table.query(
             KeyConditionExpression=(
-                boto3.dynamodb.conditions.Key('user_name').eq(user_name)
-                & boto3.dynamodb.conditions.Key('stock_symbol#date')
-                .begins_with(stock_name + "#")
+                boto3.dynamodb.conditions.Key("user_name").eq(user_name)
+                & boto3.dynamodb.conditions.Key("stock_symbol#date").begins_with(
+                    stock_name + "#"
+                )
             )
         )
 
-        if 'Items' in response and response['Items']:
-            return jsonify(response['Items'])
-        return jsonify(
-            {"message": "No data found for the given user and stock."}
-        ), 404
+        if "Items" in response and response["Items"]:
+            return jsonify(response["Items"])
+        return jsonify({"message": "No data found for the given user and stock."}), 404
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -139,7 +134,7 @@ def register():
     """
     API endpoint to register the a new user to the analytics microservice
     """
-    payload   = request.get_json() or {}
+    payload = request.get_json() or {}
     user_name = payload.get("user_name")
     if not user_name:
         return jsonify({"error": "user_name is required"}), 400
@@ -150,9 +145,7 @@ def register():
             return jsonify({"error": "UserAlreadyExists"}), 409
 
         # 2) Write new user
-        table_users.put_item(Item={
-            "user_name":  user_name
-        })
+        table_users.put_item(Item={"user_name": user_name})
         return jsonify({"message": f"Registered {user_name}"}), 201
 
     except ClientError:
@@ -164,5 +157,3 @@ def register_routes(app):
     Register the routes with the Flask app.
     """
     app.register_blueprint(routes)
-
-
