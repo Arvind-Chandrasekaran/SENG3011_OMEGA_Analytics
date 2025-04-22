@@ -1,7 +1,9 @@
 from flask import Flask
 from routes import register_routes
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 register_routes(app)
 
